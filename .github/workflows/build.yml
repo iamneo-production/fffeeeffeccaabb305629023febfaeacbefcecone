@@ -1,45 +1,39 @@
-name: Build
-'on':
-  push:
-    branches:
-      - '*'
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Set up JDK 11
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-      - name: Build and analyze
-        env:
-          GITHUB_TOKEN: fffeeeffeccaabb305629023febfaeacbefcecone
-          SONAR_TOKEN: 811c9a490983734401ba4e491eaefc8bfa7281de
-        run: >-
-          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -Dsonar.projectKey=iamneo-production_fffeeeffeccaabb305629023febfaeacbefcecone
-          -Dsonar.login=811c9a490983734401ba4e491eaefc8bfa7281de
-      - name: Trigger API
-        if: always()
-        env:
-          API_URL: '${{ secrets.API_URL }}'
-          API_SECRET: '${{ secrets.API_SECRET }}'
-        run: >
-          REPO_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d '/' -f 2)
+package com.example.pharmacy.controller;
 
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+import com.example.pharmacy.model.Medicine;
+import org.springframework.web.bind.annotation.*;
 
-          API_PAYLOAD="{ \"repo_id\": \"$REPO_NAME\", \"branch_name\":
-          \"$BRANCH_NAME\", \"api_secret\": \"$API_SECRET\" }"
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-          curl -X POST -H "Content-Type: application/json" -d "$API_PAYLOAD"
-          $API_URL
+@RestController
+@RequestMapping("/medicines")
+public class MedicineController {
+    private final Map<Integer, Medicine> medicineMap = new ConcurrentHashMap<>();
+        private int nextMedicineId = 1;
+
+            @PostMapping
+                public boolean addMedicine(@RequestBody Medicine medicine) {
+                        // Assign a unique ID to the medicine
+                                medicine.setMedicineId(nextMedicineId++);
+                                        // Add the medicine to the map
+                                                medicineMap.put(medicine.getMedicineId(), medicine);
+                                                        return true;
+                                                            }
+
+                                                                @PutMapping("/{medicineId}")
+                                                                    public Medicine updateMedicine(@PathVariable int medicineId, @RequestBody Medicine updatedMedicine) {
+                                                                            if (medicineMap.containsKey(medicineId)) {
+                                                                                        // Update the medicine details
+                                                                                                    Medicine existingMedicine = medicineMap.get(medicineId);
+                                                                                                                existingMedicine.setMedicineName(updatedMedicine.getMedicineName());
+                                                                                                                            existingMedicine.setPrice(updatedMedicine.getPrice());
+                                                                                                                                        existingMedicine.setQuantity(updatedMedicine.getQuantity());
+                                                                                                                                                    existingMedicine.setDescription(updatedMedicine.getDescription());
+                                                                                                                                                                return existingMedicine;
+                                                                                                                                                                        }
+                                                                                                                                                                                return null;
+                                                                                                                                                                                    }
+                                                                                                                                                                                    }
+                                                                                                                                                                                    
